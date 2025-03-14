@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Tiny Tiles | <%= project.title %></title>
+	<style>
+		* {
+			font-optical-sizing: auto;
+			font-style: normal;
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0;
+		}
+
+		body {
+			font-family: Arial, sans-serif;
+			background-color: #f4f4f4;
+			text-align: center;
+			margin: 0;
+			padding: 20px;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+		}
+
+		h1 {
+			color: #333;
+			margin-bottom: 10px;
+		}
+
+		.artistDisplay {
+			color: #666;
+			font-size: 16px;
+			margin-bottom: 20px;
+		}
+
+		.canvas {
+			display: grid;
+			grid-template-columns: repeat(<%- project.pixelGrid[0].length %>, 1fr);
+			margin: 20px;
+			background-color: #37474f;
+			padding: 10px;
+			border-radius: 10px;
+			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+		}
+
+		.pixel {
+			width: 25px;
+			height: 25px;
+			border: 0.1px solid #546e7a;
+			transition: background-color 0.2s;
+		}
+
+		.Tools {
+			margin: 20px 0;
+			background: white;
+			padding: 15px;
+			border-radius: 10px;
+			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+		}
+
+		.Tools h3 {
+			margin-bottom: 10px;
+		}
+
+		.resetBtn {
+			padding: 10px 15px;
+			background: #dc3545;
+			color: white;
+			border: none;
+			border-radius: 5px;
+			cursor: pointer;
+			font-size: 16px;
+		}
+
+		.resetBtn:hover {
+			background: #c82333;
+		}
+
+		.saveProjectForm {
+			background: white;
+			padding: 20px;
+			border-radius: 10px;
+			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+			width: 300px;
+			margin: 20px auto;
+		}
+
+		.saveProjectForm input {
+			width: calc(100% - 20px);
+			padding: 10px;
+			margin: 10px 0;
+			border: 1px solid #ccc;
+			border-radius: 5px;
+			display: block;
+		}
+
+		.saveProjectForm button {
+			width: 100%;
+			padding: 10px;
+			background: #28a745;
+			color: white;
+			border: none;
+			border-radius: 5px;
+			cursor: pointer;
+			font-size: 16px;
+		}
+
+		.saveProjectForm button:hover {
+			background: #218838;
+		}
+
+		.saveMessageDisplay {
+			color: #dc3545;
+			font-size: 14px;
+			margin-top: 5px;
+			margin-bottom: 10px;
+		}
+
+		.back-link {
+			display: inline-block;
+			margin-top: 20px;
+			padding: 10px 15px;
+			background: #007bff;
+			color: white;
+			text-decoration: none;
+			border-radius: 5px;
+			font-size: 16px;
+			transition: background 0.2s;
+		}
+
+		.back-link:hover {
+			background: #0056b3;
+		}
+
+	</style>
+</head>
+<body>
+	<h1 class="titleDisplay"><%= project.title %></h1>
+	<p class="artistDisplay">Artist: <%= project.artist %></p>
+
+	<div class="canvas"></div>
+	
+	<div class="Tools">
+		<h3>Tools</h3>
+		
+		<div class="hexColor">
+			<input type="text" class="hexInput" placeholder="Enter HEX color code">
+			<button class="hexBtn">Set</button>
+		</div>
+		
+		<div>
+			<button class="addRowTopBtn">Add Row Top</button>
+			<button class="addRowBottomBtn">Add Row Bottom</button>
+			<button class="addColLeftBtn">Add Column Left</button>
+			<button class="addColRightBtn">Add Column Right</button>
+		</div>
+		
+		<div>
+			<button class="delRowTopBtn">Del Row Top</button>
+			<button class="delRowBottomBtn">Del Row Bottom</button>
+			<button class="delColLeftBtn">Del Column Left</button>
+			<button class="delColRightBtn">Del Column Right</button>
+		</div>
+		
+		<div class="imageFlip">
+			<button class="flipHBtn">Flip Horizontal</button>
+			<button class="flipVBtn">Flip Vertical</button>
+		</div>
+
+		<div class="imageRotate">
+			<button class="rotateLBtn">Rotate Left</button>
+			<button class="rotateRBtn">Rotate Right</button>
+		</div>
+		
+		<button class="copyBtn">Copy</button>
+		
+		<button class="resetBtn">Reset</button>
+	</div>
+
+	<div class="saveProjectForm">
+		<form action="/projects" method="POST">
+			<input type="text" name="title" id="title" value="<%= project.title %>">
+			<input type="text" name="artist" id="artist" value="<%= project.artist %>">
+			<input type="password" name="password" id="password" placeholder="Enter password">
+			<p class="saveMessageDisplay"><%= message %></p>
+			<button type="submit">Save</button>
+		</form>
+	</div>
+
+	<a href="/projects" class="back-link">Back to Projects</a>
+
+	<script>
+		const projectId = "<%- project.id %>"
+		const title = "<%- project.title %>"
+		const artist = "<%- project.artist %>"
+		let pixelGrid = <%- JSON.stringify(project.pixelGrid) %>
+			  
+		const canvas = document.querySelector(".canvas")
+		const saveProjectForm = document.querySelector(".saveProjectForm")
+		const saveMessageDisplay = document.querySelector(".saveMessageDisplay")
+		
+		let numRows = pixelGrid.length
+		let numCols = pixelGrid[0].length
+		
+		let currColor = ""
+		
+		const resetCanvas = () => {
+			canvas.textContent = ""
+			canvas.style.gridTemplateColumns = `repeat(${numCols}, 1fr)`
+			for (let r = 0; r < numRows; r++) {
+				for(let c = 0; c < numCols; c++) {
+					const pixel = document.createElement("div")
+					pixel.classList.add("pixel")
+					pixel.setAttribute("data-row", r)
+					pixel.setAttribute("data-col", c)
+					pixel.style.backgroundColor = pixelGrid[r][c]
+					canvas.appendChild(pixel)
+
+					pixel.addEventListener("click", () => {
+						pixel.style.backgroundColor = currColor
+						pixelGrid[r][c] = currColor
+					})
+				}
+			}
+		}
+		
+		resetCanvas()
+		
+		
+		saveProjectForm.addEventListener("submit", async (event) => {
+				event.preventDefault()
+
+				const password = document.querySelector("#password").value
+
+				const data = {
+					password,
+					pixelGrid
+				}
+
+				const response = await fetch(`/projects/${projectId}`, {
+					method: "PATCH",
+					headers: {
+						"Content-Type": "application/json"
+					},
+					body: JSON.stringify(data)
+				});
+
+				const result = await response.json();
+				console.log(result)
+
+				saveMessageDisplay.textContent = result.message
+		})
+		
+		const copyBtn = document.querySelector(".copyBtn")
+		copyBtn.addEventListener("click", () => {
+			navigator.clipboard.writeText(JSON.stringify(pixelGrid))	
+		})
+	
+	</script>
+	<script type="text/javascript" src="/js/elements.js"></script>
+	<script type="text/javascript" src="/js/canvasSize.js"></script>
+	<script type="text/javascript" src="/js/colors.js"></script>
+	<script type="text/javascript" src="/js/rotateFlip.js"></script>
+</body>
+</html>
